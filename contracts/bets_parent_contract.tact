@@ -90,18 +90,49 @@ contract BetsParentContract with Deployable, Ownable {
         if (currentShares == null) {
             self.userShares.set(key, sharesBought); 
         } else {
-            let currentSharesAsInt: Int = self.userShares.get(key)!!;
-            self.userShares.set(key, currentSharesAsInt + sharesBought); 
+            self.userShares.set(key, currentShares!! + sharesBought); 
         }
     }
 
     receive(msg: SellShares){
-        require(optionIndex < self.options.length, "Invalid option");
+        require(msg.optionIndex < self.options.length, "Invalid option");
         require(!self.winnerDeclared, "Winner already declared");
 
         // Check if the user has sufficient shares
         let key: Address = sender();
         let currentShares: Int? = self.userShares.get(key); 
-        require(currentShares != null && currentShares >= shareAmount, "Insufficient shares");
+        require(currentShares != null && currentShares!! >= msg.shareAmount, "Insufficient shares");
+
+        let currentPrice: Int = self.options.m.get(msg.optionIndex)!!.price;
+        let poolReduction: Int = msg.shareAmount * currentPrice;
+
+        let optionPool: Int = self.options.m.get(msg.optionIndex)!!.pool;
+        let newOptionPool: Int = optionPool > poolReduction ? optionPool - poolReduction : 1;
+
+        let totalPoolBefore: Int = self.totalPool;
+        let newTotalPool: Int = totalPoolBefore > poolReduction ? totalPoolBefore - poolReduction : 1;
+
+        let newPrice: Int = newOptionPool / newTotalPool;
+        let effectivePrice: Int = (currentPrice + newPrice) / 2;
+
+        // Calculate the value of the shares being sold based on the effective price
+        let sellValue: Int = msg.shareAmount * effectivePrice;
+
+        // Update the option's pool and the total pool
+        newOptionPool = self.options.m.get(msg.optionIndex)!!.pool;
+        self.totalPool = newTotalPool;
+
+        // Recalculate prices for all options
+        self.updatePrices();
+
+        // Deduct the user's shares
+        self.userShares.set(key, currentShares!! - msg.shareAmount); // Update the user's shares
+        
+        send(SendParameters{
+            to: sender(),
+            value: sellValue,
+            mode: SendIgnoreErrors,
+            body: "Amount send for selling the shares".asComment(),
+        });
     }
 }
