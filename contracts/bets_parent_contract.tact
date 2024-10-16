@@ -4,6 +4,7 @@ import "./messages";
 import "./utils";
 
 contract BetsParentContract with Deployable, Ownable {
+    id: Int as uint32;
     totalPool : Int;
     owner: Address;            
     options: OptionsArray;     
@@ -12,12 +13,14 @@ contract BetsParentContract with Deployable, Ownable {
     userShares: map<Address, Int>;
 
     init(
+        id: Int,
         _description: String,
         option1Name: String,
         option1Pool: Int, 
         option2Name: String, 
         option2Pool: Int
     ) {
+        self.id = id;
         self.owner = sender(); 
         self.description = _description;
 
@@ -68,6 +71,34 @@ contract BetsParentContract with Deployable, Ownable {
         return userShares;
     }
 
+    fun addLiquidity(liquidity: Int){
+        self.requireOwner();
+        self.totalPool += liquidity;
+        
+        foreach (index, option in self.options.m) {
+            let poolShare: Int = option.price * self.totalPool; 
+            option.pool = poolShare; 
+            self.options.m.set(index, option); 
+        }
+
+        self.updatePrices();
+    } 
+
+    // Getter function to for betDetails
+    get fun getBetDetails(): BetDetails {
+        let betDetails  = BetDetails{totalPool: self.totalPool, options: emptyMap()};
+        
+        foreach (index, option in self.options.m) {
+            betDetails.options.set(index, OptionDetail{
+                name: option.name,
+                price: option.price
+            }); 
+        }
+
+        return betDetails; 
+    }
+
+    
     receive(msg: BuyShares) {
         require(msg.optionIndex < self.options.length, "Invalid option");
         require(!self.winnerDeclared, "Winner already declared");
@@ -127,7 +158,7 @@ contract BetsParentContract with Deployable, Ownable {
 
         // Deduct the user's shares
         self.userShares.set(key, currentShares!! - msg.shareAmount); // Update the user's shares
-        
+
         send(SendParameters{
             to: sender(),
             value: sellValue,

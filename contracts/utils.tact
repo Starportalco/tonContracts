@@ -20,6 +20,15 @@ extends mutates fun append(self: OptionsArray, item: Option) {
     self.length += 1;               
 }
 
+struct OptionDetail {
+    name: String;  // Name of the option
+    price: Int;    // Price of the option
+}
+
+struct BetDetails {
+    totalPool: Int;                     // Total pool amount
+    options: map<Int, OptionDetail>;    // Map of options and their prices
+}
 
 
 

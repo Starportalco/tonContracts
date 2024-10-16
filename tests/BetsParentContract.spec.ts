@@ -11,7 +11,19 @@ describe('BetsParentContract', () => {
     beforeEach(async () => {
         blockchain = await Blockchain.create();
 
-        betsParentContract = blockchain.openContract(await BetsParentContract.fromInit());
+        const description = "USElections";
+        const option1Name = "DonaldTrump";
+        const option1Pool = BigInt(100);  
+        const option2Name = "KamlaHarris";
+        const option2Pool = BigInt(200);  
+        betsParentContract = blockchain.openContract(await BetsParentContract.fromInit(
+            2432n,
+            description, 
+            option1Name, 
+            option1Pool, 
+            option2Name,
+            option2Pool
+        ));
 
         deployer = await blockchain.treasury('deployer');
 
@@ -34,8 +46,11 @@ describe('BetsParentContract', () => {
         });
     });
 
-    it('should deploy', async () => {
-        // the check is done inside beforeEach
-        // blockchain and betsParentContract are ready to use
+    it('checkBalance', async () => {
+        await betsParentContract.send(
+            
+        );
+        const balance = await betsParentContract.getContractBalance();
+        console.log(balance);
     });
 });
