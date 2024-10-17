@@ -219,7 +219,7 @@ contract BetsParentContract with Deployable, Ownable {
         self.winnerDeclared = true;
     }
 
-    receive(msg: ClaimWinnings) {
+    receive("ClaimWinnings") {
         require(self.winnerDeclared, "Winner not declared yet");
 
         let userSharesInWinningOption: Int? = self.userShares.get(sender());

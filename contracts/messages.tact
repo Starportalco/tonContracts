@@ -16,7 +16,3 @@ message AddOption{
 message DeclareWinner{
     optionIndex: Int;
 }
-
-message ClaimWinnings{
-    
-}
