@@ -46,32 +46,34 @@ contract BetsParentContract with Deployable, Ownable {
         dump(option2.price); 
     }
 
-    //Getter function to get the contract Balance
-    get fun contractBalance(): String{
-        return myBalance().toCoinsString();
+    receive(){
+        // accept incoming TON transfers
     }
 
-    fun updatePrices(){          
+
+    //Getter function to get the contract Balance
+    get fun contractBalance(): Int{
+        return myBalance();
+    }
+
+    get fun updatePrices(){          
         foreach (index, option in self.options.m) {
             option.price = (option.pool * PRECISION) / self.totalPool;
             self.options.m.set(index, option); // Update the option with the new price
         }
     }
 
-    get fun getEffectivePrice(optionIndex: Int, betAmount: Int): Int {
-        dump(optionIndex);
-        let currentPrice: Option? = self.options.m.get(optionIndex);
-        dump(currentPrice!!.price);
-        // let newPrice: Int = ((self.options.m.get(optionIndex)!!.pool + betAmount) * PRECISION) / (self.totalPool + betAmount);
-        // let effectivePrice: Int = (currentPrice + newPrice) / 2;
-        // return effectivePrice;
-        return 0;
+    get fun EffectivePrice(optionIndex: Int, betAmount: Int): Int {
+        let currentPrice: Int = self.options.m.get(optionIndex)!!.price;
+        let newPrice: Int = ((self.options.m.get(optionIndex)!!.pool + betAmount) * PRECISION) / (self.totalPool + betAmount);
+        let effectivePrice: Int = (currentPrice + newPrice) / 2;
+        return effectivePrice;
     }
 
-    get fun userHoldings(address: Address): Int?{
+    get fun userHoldings(address: Address): Int{
         let holdings: Int? = self.userShares.get(address);
         if(holdings == null){
-            return null;
+            return 0;
         }
         let userShares: Int =  self.userShares.get(address)!!;
         return userShares;
@@ -91,7 +93,7 @@ contract BetsParentContract with Deployable, Ownable {
     } 
 
     // Getter function to for betDetails
-    get fun getBetDetails(): BetDetails {
+    get fun BetDetails(): BetDetails {
         let betDetails  = BetDetails{totalPool: self.totalPool, options: emptyMap()};
         
         foreach (index, option in self.options.m) {
@@ -116,7 +118,7 @@ contract BetsParentContract with Deployable, Ownable {
 
         self.updatePrices();
 
-        let effectivePrice: Int = self.getEffectivePrice(msg.optionIndex, msg.betAmount);    
+        let effectivePrice: Int = self.EffectivePrice(msg.optionIndex, msg.betAmount);    
         
         let sharesBought: Int = (msg.betAmount * PRECISION) / effectivePrice;
 
