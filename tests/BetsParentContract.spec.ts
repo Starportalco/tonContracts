@@ -47,10 +47,7 @@ describe('BetsParentContract', () => {
     });
 
     it('checkBalance', async () => {
-        await betsParentContract.send(
-            
-        );
-        const balance = await betsParentContract.getContractBalance();
+        const balance = await betsParentContract.getGetEffectivePrice(BigInt(1), BigInt(200));
         console.log(balance);
     });
 });

@@ -3,6 +3,8 @@ import "@stdlib/ownable";
 import "./messages";
 import "./utils";
 
+const PRECISION: Int = pow(10, 2); //Precision to work with floating point values...
+
 contract BetsParentContract with Deployable, Ownable {
     id: Int as uint32;
     totalPool : Int;
@@ -30,17 +32,18 @@ contract BetsParentContract with Deployable, Ownable {
 
         let option1 = Option{ 
             name: option1Name, 
-            price: self.totalPool != 0 ? option1Pool / self.totalPool : 0, 
+            price: (option1Pool * PRECISION) / self.totalPool, 
             pool: option1Pool 
         };
         self.options.append(option1); 
-
+        dump(option1.price);
         let option2 = Option{ 
             name: option2Name, 
-            price: self.totalPool != 0 ? option2Pool / self.totalPool : 0, 
+            price: (option2Pool * PRECISION) / self.totalPool, 
             pool: option2Pool 
         };
-        self.options.append(option2); 
+        self.options.append(option2);
+        dump(option2.price); 
     }
 
     //Getter function to get the contract Balance
@@ -50,16 +53,19 @@ contract BetsParentContract with Deployable, Ownable {
 
     fun updatePrices(){          
         foreach (index, option in self.options.m) {
-            option.price = option.pool / self.totalPool; 
+            option.price = (option.pool * PRECISION) / self.totalPool;
             self.options.m.set(index, option); // Update the option with the new price
         }
     }
 
     get fun getEffectivePrice(optionIndex: Int, betAmount: Int): Int {
-        let currentPrice: Int = self.options.m.get(optionIndex)!!.price;
-        let newPrice: Int = (self.options.m.get(optionIndex)!!.pool - betAmount) / (self.totalPool - betAmount);
-        let effectivePrice: Int = (currentPrice + newPrice) / 2;
-        return effectivePrice;
+        dump(optionIndex);
+        let currentPrice: Option? = self.options.m.get(optionIndex);
+        dump(currentPrice!!.price);
+        // let newPrice: Int = ((self.options.m.get(optionIndex)!!.pool + betAmount) * PRECISION) / (self.totalPool + betAmount);
+        // let effectivePrice: Int = (currentPrice + newPrice) / 2;
+        // return effectivePrice;
+        return 0;
     }
 
     get fun userHoldings(address: Address): Int?{
@@ -76,7 +82,7 @@ contract BetsParentContract with Deployable, Ownable {
         self.totalPool += liquidity;
         
         foreach (index, option in self.options.m) {
-            let poolShare: Int = option.price * self.totalPool; 
+            let poolShare: Int = (option.price * self.totalPool) / PRECISION; 
             option.pool = poolShare; 
             self.options.m.set(index, option); 
         }
@@ -94,11 +100,10 @@ contract BetsParentContract with Deployable, Ownable {
                 price: option.price
             }); 
         }
-
         return betDetails; 
     }
 
-    
+
     receive(msg: BuyShares) {
         require(msg.optionIndex < self.options.length, "Invalid option");
         require(!self.winnerDeclared, "Winner already declared");
@@ -113,7 +118,7 @@ contract BetsParentContract with Deployable, Ownable {
 
         let effectivePrice: Int = self.getEffectivePrice(msg.optionIndex, msg.betAmount);    
         
-        let sharesBought: Int = msg.betAmount / effectivePrice;
+        let sharesBought: Int = (msg.betAmount * PRECISION) / effectivePrice;
 
         let key: Address = sender();
         let currentShares: Int? = self.userShares.get(key);
@@ -135,7 +140,7 @@ contract BetsParentContract with Deployable, Ownable {
         require(currentShares != null && currentShares!! >= msg.shareAmount, "Insufficient shares");
 
         let currentPrice: Int = self.options.m.get(msg.optionIndex)!!.price;
-        let poolReduction: Int = msg.shareAmount * currentPrice;
+        let poolReduction: Int = (msg.shareAmount * currentPrice) / PRECISION;
 
         let optionPool: Int = self.options.m.get(msg.optionIndex)!!.pool;
         let newOptionPool: Int = optionPool > poolReduction ? optionPool - poolReduction : 1;
@@ -143,11 +148,11 @@ contract BetsParentContract with Deployable, Ownable {
         let totalPoolBefore: Int = self.totalPool;
         let newTotalPool: Int = totalPoolBefore > poolReduction ? totalPoolBefore - poolReduction : 1;
 
-        let newPrice: Int = newOptionPool / newTotalPool;
+        let newPrice: Int = (newOptionPool * PRECISION) / newTotalPool;
         let effectivePrice: Int = (currentPrice + newPrice) / 2;
 
         // Calculate the value of the shares being sold based on the effective price
-        let sellValue: Int = msg.shareAmount * effectivePrice;
+        let sellValue: Int = (msg.shareAmount * effectivePrice) / PRECISION;
 
         // Update the option's pool and the total pool
         newOptionPool = self.options.m.get(msg.optionIndex)!!.pool;
