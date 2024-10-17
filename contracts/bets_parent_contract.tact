@@ -171,4 +171,40 @@ contract BetsParentContract with Deployable, Ownable {
             body: "Amount send for selling the shares".asComment(),
         });
     }
+
+    receive(msg: AddOption){
+        self.requireOwner();
+        require(!self.winnerDeclared, "Cannot add options after the winner has been declared");
+        require(msg.initialPrice > 0 && msg.initialPrice < PRECISION, "Initial price must be between 0 and 1 (in 6 decimals)");
+
+        let reductionFactor: Int = (PRECISION - msg.initialPrice) * PRECISION / PRECISION;
+
+        foreach (index, option in self.options.m) {
+            option.price = (option.price * reductionFactor) / PRECISION; 
+            option.pool = (option.pool * reductionFactor) / PRECISION;   
+            self.options.m.set(index, option); 
+        }
+
+        let newOption = Option{
+            name: msg.optionName,
+            price: msg.initialPrice,
+            pool: 0
+        };
+        self.options.append(newOption);
+
+        let remainingPool: Int = self.totalPool;
+        foreach (index, option in self.options.m) {
+            option.pool = (option.price * self.totalPool) / PRECISION; // Update pool
+            remainingPool -= option.pool; // Subtract from remaining pool
+            self.options.m.set(index, option); // Update the option in the map
+        }
+
+        if (remainingPool > 0) {
+            let lastOption: Option = self.options.m.get(self.options.length - 1)!!; // Get last option
+            lastOption.pool += remainingPool; // Add remaining pool to last option
+            self.options.m.set(self.options.length - 1, lastOption); // Update last option
+        }
+
+        self.updatePrices();
+    }
 }
