@@ -37,14 +37,12 @@ contract BetsParentContract with Deployable, Ownable {
             pool: option1Pool 
         };
         self.options.append(option1); 
-        dump(option1.price);
         let option2 = Option{ 
             name: option2Name, 
             price: (option2Pool * PRECISION) / self.totalPool, 
             pool: option2Pool 
         };
         self.options.append(option2);
-        dump(option2.price); 
     }
 
     receive(){
@@ -140,6 +138,7 @@ contract BetsParentContract with Deployable, Ownable {
         // Check if the user has sufficient shares
         let key: Address = sender();
         let currentShares: Int? = self.userShares.get(key); 
+        dump(currentShares);//to log 
         require(currentShares != null && currentShares!! >= msg.shareAmount, "Insufficient shares");
 
         let currentPrice: Int = self.options.m.get(msg.optionIndex)!!.price;

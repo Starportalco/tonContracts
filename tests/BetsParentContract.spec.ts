@@ -112,6 +112,7 @@ describe('BetsParentContract', () => {
     it('should allow buying shares and contract balance should also increase', async () => {
         const betAmount = BigInt(1000); // Example bet amount
         const initialContractBalance = BigInt(await betsParentContract.getContractBalance());
+        console.log("initial", initialContractBalance)
         
         // Send BuyShares message
         await betsParentContract.send(deployer.getSender(), {
@@ -127,8 +128,45 @@ describe('BetsParentContract', () => {
         console.log(userHoldings)
         expect(userHoldings).toBeGreaterThan(0); 
         const contractBalanceAfterBuy = await betsParentContract.getContractBalance();
-        console.log(contractBalanceAfterBuy);
+        console.log("after buying", contractBalanceAfterBuy);
         expect(contractBalanceAfterBuy).toBeGreaterThan(initialContractBalance);
     });
 
+    it('should allow selling shares and verify state changes', async () => {
+        const betAmount = BigInt(1000); // Example bet amount
+        await betsParentContract.send(deployer.getSender(), {
+            value: toNano(betAmount),
+        }, {
+            $$type: 'BuyShares',
+            optionIndex: BigInt(0),
+            betAmount: betAmount,
+        });
+        
+        const betDetails = await betsParentContract.getBetDetails();
+        const optionPriceBeforeSell = betDetails.options.get(BigInt(0))?.price; 
+        console.log("Option Price after selling:", optionPriceBeforeSell);
+        const userHoldingsBeforeSell = await betsParentContract.getUserHoldings(deployer.address);
+        console.log("User Holdings before selling:", userHoldingsBeforeSell);
+
+        const sharesToSell = BigInt(100); // Example shares to sell
+        await betsParentContract.send(
+            deployer.getSender(), 
+        {
+            value: toNano(0.05),
+        }, {
+            $$type: 'SellShares',
+            optionIndex: BigInt(0),
+            shareAmount: sharesToSell,
+        });
+    
+        // Retrieve user holdings after the sell
+        const userHoldings = await betsParentContract.getUserHoldings(deployer.address);
+        console.log("User Holdings after selling:", userHoldings);
+        expect(userHoldings).toBeGreaterThan(0); // Check if the user still has shares left
+
+        const optionPriceAfterSell = betDetails.options.get(BigInt(0))?.price; 
+        console.log("Option Price after selling:", optionPriceAfterSell);
+        expect(optionPriceAfterSell).toBeLessThan(BigInt(100)); 
+    });
+    
 });
