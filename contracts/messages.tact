@@ -12,3 +12,11 @@ message AddOption{
     optionName: String;
     initialPrice: Int;
 }
+
+message DeclareWinner{
+    optionIndex: Int;
+}
+
+message ClaimWinnings{
+    
+}

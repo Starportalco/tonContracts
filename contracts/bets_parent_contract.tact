@@ -12,6 +12,7 @@ contract BetsParentContract with Deployable, Ownable {
     options: OptionsArray;     
     description: String;      
     winnerDeclared: Bool = false; 
+    winningOptionIndex: Int = 0; 
     userShares: map<Address, Int>;
 
     init(
@@ -208,5 +209,32 @@ contract BetsParentContract with Deployable, Ownable {
         }
 
         self.updatePrices();
+    }
+
+    receive(msg: DeclareWinner) {
+        self.requireOwner(); // Only the owner can declare the winner
+        require(msg.optionIndex < self.options.length, "Invalid option");
+        require(!self.winnerDeclared, "Winner already declared");
+
+        self.winningOptionIndex = msg.optionIndex;
+        self.winnerDeclared = true;
+    }
+
+    receive(msg: ClaimWinnings) {
+        require(self.winnerDeclared, "Winner not declared yet");
+
+        let userSharesInWinningOption: Int? = self.userShares.get(sender());
+        require(userSharesInWinningOption != null && userSharesInWinningOption!! > 0, "No shares in winning option");
+
+        let winnings: Int = (userSharesInWinningOption!! * self.totalPool) / self.options.m.get(self.winningOptionIndex)!!.pool;
+
+        self.userShares.set(sender(), 0); // Reset the user's shares in the winning option
+
+        send(SendParameters{
+            to: sender(),
+            value: winnings,
+            mode: SendIgnoreErrors,
+            body: "Winnings claimed".asComment(),
+        });
     }
 }
